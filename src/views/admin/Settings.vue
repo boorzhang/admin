@@ -19,6 +19,7 @@ import SettingsSMTPTab from './components/SettingsSMTPTab.vue'
 import SettingsCaptchaTab from './components/SettingsCaptchaTab.vue'
 import SettingsOrderEmailTemplateTab from './components/SettingsOrderEmailTemplateTab.vue'
 import SettingsNavigationTab from './components/SettingsNavigationTab.vue'
+import SettingsHomeAnnouncementTab from './components/SettingsHomeAnnouncementTab.vue'
 
 const { t } = useI18n()
 const loading = ref(false)
@@ -26,6 +27,7 @@ const smtpTabRef = ref<InstanceType<typeof SettingsSMTPTab>>()
 const captchaTabRef = ref<InstanceType<typeof SettingsCaptchaTab>>()
 const orderEmailTemplateTabRef = ref<InstanceType<typeof SettingsOrderEmailTemplateTab>>()
 const navigationTabRef = ref<InstanceType<typeof SettingsNavigationTab>>()
+const homeAnnouncementTabRef = ref<InstanceType<typeof SettingsHomeAnnouncementTab>>()
 const siteIconPickerRef = ref<InstanceType<typeof MediaPicker> | null>(null)
 const supportedLanguages = ['zh-CN', 'zh-TW', 'en-US'] as const
 type SupportedLanguage = (typeof supportedLanguages)[number]
@@ -68,6 +70,7 @@ const tabs = computed(() => [
   { label: t('admin.settings.tabs.navigation'), value: 'navigation' },
   { label: t('admin.settings.tabs.about'), value: 'about' },
   { label: t('admin.settings.tabs.legal'), value: 'legal' },
+  { label: t('admin.settings.tabs.homeAnnouncement'), value: 'home_announcement' },
   { label: t('admin.settings.tabs.smtp'), value: 'smtp' },
   { label: t('admin.settings.tabs.orderEmailTemplate'), value: 'order_email_template' },
   { label: t('admin.settings.tabs.captcha'), value: 'captcha' },
@@ -697,6 +700,10 @@ const saveSettings = async () => {
     await navigationTabRef.value?.save()
     return
   }
+  if (currentTab.value === 'home_announcement') {
+    await homeAnnouncementTabRef.value?.save()
+    return
+  }
   loading.value = true
   try {
     if (currentTab.value === 'telegram') {
@@ -740,7 +747,7 @@ onMounted(() => {
             {{ lang.name }}
           </button>
         </div>
-        <Button size="sm" class="w-full sm:w-auto" :disabled="loading || smtpTabRef?.submitting || smtpTabRef?.smtpTesting || captchaTabRef?.submitting || orderEmailTemplateTabRef?.submitting || navigationTabRef?.submitting" @click="saveSettings">
+        <Button size="sm" class="w-full sm:w-auto" :disabled="loading || smtpTabRef?.submitting || smtpTabRef?.smtpTesting || captchaTabRef?.submitting || orderEmailTemplateTabRef?.submitting || navigationTabRef?.submitting || homeAnnouncementTabRef?.submitting" @click="saveSettings">
           <span v-if="loading" class="h-3 w-3 animate-spin rounded-full border-2 border-primary/30 border-t-primary"></span>
           {{ loading ? t('admin.settings.actions.saving') : t('admin.settings.actions.save') }}
         </Button>
@@ -1177,6 +1184,10 @@ onMounted(() => {
           <RichEditor :key="`privacy-${currentLang}`" v-model="form.legal.privacy[currentLang]" :placeholder="t('admin.settings.legal.privacyPlaceholder')" />
         </div>
       </div>
+      </TabsContent>
+
+      <TabsContent value="home_announcement" :forceMount="true" v-show="currentTab === 'home_announcement'" class="mt-0">
+        <SettingsHomeAnnouncementTab ref="homeAnnouncementTabRef" :current-lang="currentLang" @saved="fetchSettings" />
       </TabsContent>
 
       <TabsContent value="smtp" :forceMount="true" v-show="currentTab === 'smtp'" class="mt-0">
