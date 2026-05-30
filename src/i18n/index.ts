@@ -612,6 +612,7 @@ const messages = {
         dashboard: '仪表盘',
         productCategories: '商品分类管理',
         productList: '商品列表',
+        wholesaleProducts: '批发价商品',
         cardSecrets: '卡密库存',
         cardSecretImports: '卡密导入',
         orderList: '订单列表',
@@ -1335,6 +1336,10 @@ const messages = {
         filters: {
           stockStatusPlaceholder: '库存状态',
           stockStatusAll: '全部库存状态',
+          wholesalePlaceholder: '批发价',
+          wholesaleAll: '全部批发价',
+          wholesaleEnabled: '有批发价',
+          wholesaleDisabled: '无批发价',
         },
         stockStatus: {
           low: '库存不足',
@@ -4054,6 +4059,7 @@ const messages = {
         dashboard: '儀表板',
         productCategories: '商品分類管理',
         productList: '商品列表',
+        wholesaleProducts: '批發價商品',
         cardSecrets: '卡密庫存',
         cardSecretImports: '卡密導入',
         orderList: '訂單列表',
@@ -4777,6 +4783,10 @@ const messages = {
         filters: {
           stockStatusPlaceholder: '庫存狀態',
           stockStatusAll: '全部庫存狀態',
+          wholesalePlaceholder: '批發價',
+          wholesaleAll: '全部批發價',
+          wholesaleEnabled: '有批發價',
+          wholesaleDisabled: '無批發價',
         },
         stockStatus: {
           low: '庫存不足',
@@ -7496,6 +7506,7 @@ const messages = {
         dashboard: 'Dashboard',
         productCategories: 'Product Categories',
         productList: 'Product List',
+        wholesaleProducts: 'Wholesale Products',
         cardSecrets: 'Card Secrets',
         cardSecretImports: 'Card Secret Imports',
         orderList: 'Order List',
@@ -8219,6 +8230,10 @@ const messages = {
         filters: {
           stockStatusPlaceholder: 'Stock status',
           stockStatusAll: 'All stock status',
+          wholesalePlaceholder: 'Wholesale pricing',
+          wholesaleAll: 'All wholesale pricing',
+          wholesaleEnabled: 'With wholesale pricing',
+          wholesaleDisabled: 'Without wholesale pricing',
         },
         stockStatus: {
           low: 'Low stock',
