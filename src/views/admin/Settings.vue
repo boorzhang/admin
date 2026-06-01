@@ -47,6 +47,8 @@ const footerLinksMaxCount = 20
 const registrationForm = reactive({
   registration_enabled: true,
   email_verification_enabled: true,
+  email_domain_allowlist_enabled: false,
+  allowed_email_domains_text: '',
 })
 const orderPaymentExpireMinutes = ref(15)
 type FooterLinkItem = {
@@ -318,6 +320,26 @@ const normalizeNumber = (value: unknown, fallback: number) => {
   return parsed
 }
 
+const splitAllowedEmailDomains = (raw: string): string[] => {
+  const seen = new Set<string>()
+  const result: string[] = []
+  raw
+    .split(/[\s,，;；]+/)
+    .map((item) => item.trim().replace(/^@+/, '').toLowerCase())
+    .filter(Boolean)
+    .forEach((domain) => {
+      if (seen.has(domain)) return
+      seen.add(domain)
+      result.push(domain)
+    })
+  return result
+}
+
+const joinAllowedEmailDomains = (raw: unknown): string => {
+  if (!Array.isArray(raw)) return ''
+  return raw.map((item) => String(item || '').trim()).filter(Boolean).join('\n')
+}
+
 const clampNumber = (value: unknown, min: number, max: number, fallback: number) => {
   const parsed = normalizeNumber(value, fallback)
   if (parsed < min) return min
@@ -508,6 +530,8 @@ const fetchSettings = async () => {
       const regData = registrationRes.data.data as Record<string, unknown>
       registrationForm.registration_enabled = regData.registration_enabled !== false
       registrationForm.email_verification_enabled = regData.email_verification_enabled !== false
+      registrationForm.email_domain_allowlist_enabled = regData.email_domain_allowlist_enabled === true
+      registrationForm.allowed_email_domains_text = joinAllowedEmailDomains(regData.allowed_email_domains)
     }
 
     if (orderEmailTmplRes.data && orderEmailTmplRes.data.data) {
@@ -549,6 +573,8 @@ const saveRegistrationSettings = async () => {
     value: {
       registration_enabled: registrationForm.registration_enabled,
       email_verification_enabled: registrationForm.email_verification_enabled,
+      email_domain_allowlist_enabled: registrationForm.email_domain_allowlist_enabled,
+      allowed_email_domains: splitAllowedEmailDomains(registrationForm.allowed_email_domains_text),
     },
   })
 }
@@ -786,6 +812,23 @@ onMounted(() => {
               <Label for="email-verification-enabled" class="text-sm font-medium">{{ t('admin.settings.registration.emailVerificationEnabled') }}</Label>
               <p class="text-xs text-muted-foreground">{{ t('admin.settings.registration.emailVerificationEnabledDesc') }}</p>
             </div>
+          </div>
+          <div class="flex flex-col gap-3 rounded-lg border border-border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center">
+            <Switch id="email-domain-allowlist-enabled" v-model="registrationForm.email_domain_allowlist_enabled" />
+            <div>
+              <Label for="email-domain-allowlist-enabled" class="text-sm font-medium">{{ t('admin.settings.registration.emailDomainAllowlistEnabled') }}</Label>
+              <p class="text-xs text-muted-foreground">{{ t('admin.settings.registration.emailDomainAllowlistEnabledDesc') }}</p>
+            </div>
+          </div>
+          <div v-if="registrationForm.email_domain_allowlist_enabled" class="space-y-2 rounded-lg border border-border bg-muted/20 px-4 py-3">
+            <Label for="allowed-email-domains" class="text-sm font-medium">{{ t('admin.settings.registration.allowedEmailDomains') }}</Label>
+            <Textarea
+              id="allowed-email-domains"
+              v-model="registrationForm.allowed_email_domains_text"
+              rows="4"
+              :placeholder="t('admin.settings.registration.allowedEmailDomainsPlaceholder')"
+            />
+            <p class="text-xs text-muted-foreground">{{ t('admin.settings.registration.allowedEmailDomainsDesc') }}</p>
           </div>
         </div>
       </div>
