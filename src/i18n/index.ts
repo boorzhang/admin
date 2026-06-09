@@ -2359,6 +2359,7 @@ const messages = {
       promotions: {
         title: '活动价',
         create: '新增活动价',
+        filterNamePlaceholder: '搜索活动名称',
         filterScope: '适用商品',
         filterScopeAll: '全部商品',
         filterScopeSearchPlaceholder: '搜索商品名称或ID',
@@ -5860,6 +5861,7 @@ const messages = {
       promotions: {
         title: '活動價',
         create: '新增活動價',
+        filterNamePlaceholder: '搜尋活動名稱',
         filterScope: '適用商品',
         filterScopeAll: '全部商品',
         filterScopeSearchPlaceholder: '搜尋商品名稱或ID',
@@ -9361,6 +9363,7 @@ const messages = {
       promotions: {
         title: 'Promotions',
         create: 'New promotion',
+        filterNamePlaceholder: 'Search promotion name',
         filterScope: 'Product',
         filterScopeAll: 'All products',
         filterScopeSearchPlaceholder: 'Search product name or ID',
