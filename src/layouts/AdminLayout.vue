@@ -197,12 +197,6 @@ const navGroups = computed<NavGroup[]>(() => {
           permission: 'GET:/admin/products',
         },
         {
-          label: t('admin.navItems.wholesaleProducts'),
-          to: '/products?wholesale=1',
-          icon: BadgePercent,
-          permission: 'GET:/admin/products',
-        },
-        {
           label: t('admin.navItems.cardSecrets'),
           to: '/card-secrets',
           icon: KeyRound,
@@ -350,6 +344,12 @@ const navGroups = computed<NavGroup[]>(() => {
           to: '/promotions',
           icon: BadgePercent,
           permission: 'GET:/admin/promotions',
+        },
+        {
+          label: t('admin.navItems.wholesalePrices'),
+          to: '/wholesale-prices',
+          icon: BadgePercent,
+          permission: 'GET:/admin/products',
         },
         {
           label: t('admin.navItems.giftCards'),

@@ -8,6 +8,7 @@ import type {
   AdminMemberLevel,
   AdminMemberLevelPrice,
   AdminPromotion,
+  AdminWholesalePrice,
   AdminBanner,
   AdminPost,
   AdminPaymentChannel,
@@ -330,6 +331,8 @@ export const adminAPI = {
   createProduct: (data: Partial<AdminProduct>) => api.post('/admin/products', data),
   updateProduct: (id: number, data: Partial<AdminProduct>) => api.put(`/admin/products/${id}`, data),
   patchProduct: (id: number, data: { is_active?: boolean; sort_order?: number; category_id?: number }) => api.patch(`/admin/products/${id}`, data),
+  updateProductWholesalePrices: (id: number, data: { wholesale_prices: AdminWholesalePrice[] }) =>
+    api.patch(`/admin/products/${id}/wholesale-prices`, data),
   deleteProduct: (id: number) => api.delete(`/admin/products/${id}`),
   batchUpdateProductStatus: (ids: number[], isActive: boolean) => api.post('/admin/products/batch-status', { ids, is_active: isActive }),
   batchUpdateProductCategory: (ids: number[], categoryId: number) => api.post('/admin/products/batch-category', { ids, category_id: categoryId }),
