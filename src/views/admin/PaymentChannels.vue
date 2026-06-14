@@ -82,6 +82,7 @@ const providerTypeLabel = (value?: string) => {
     bepusdt: t('admin.paymentChannels.providerTypes.bepusdt'),
     epusdt: t('admin.paymentChannels.providerTypes.epusdt'),
     okpay: t('admin.paymentChannels.providerTypes.okpay'),
+    dujiaopay: t('admin.paymentChannels.providerTypes.dujiaopay'),
     tokenpay: t('admin.paymentChannels.providerTypes.tokenpay'),
   }
   return map[value || ''] || value || '-'
@@ -98,6 +99,24 @@ const channelTypeLabel = (value?: string) => {
     'usdt-trc20': t('admin.paymentChannels.channelTypes.usdtTrc20'),
     'usdc-trc20': t('admin.paymentChannels.channelTypes.usdcTrc20'),
     trx: t('admin.paymentChannels.channelTypes.trx'),
+    'tron-usdt': t('admin.paymentChannels.channelTypes.tronUsdt'),
+    'tron-trx': t('admin.paymentChannels.channelTypes.tronTrx'),
+    'ethereum-usdt': t('admin.paymentChannels.channelTypes.ethereumUsdt'),
+    'ethereum-usdc': t('admin.paymentChannels.channelTypes.ethereumUsdc'),
+    'ethereum-eth': t('admin.paymentChannels.channelTypes.ethereumEth'),
+    'bsc-usdt': t('admin.paymentChannels.channelTypes.bscUsdt'),
+    'bsc-bnb': t('admin.paymentChannels.channelTypes.bscBnb'),
+    'polygon-usdc': t('admin.paymentChannels.channelTypes.polygonUsdc'),
+    'polygon-usdt0': t('admin.paymentChannels.channelTypes.polygonUsdt0'),
+    'base-usdc': t('admin.paymentChannels.channelTypes.baseUsdc'),
+    'arbitrum-usdc': t('admin.paymentChannels.channelTypes.arbitrumUsdc'),
+    'arbitrum-usdt0': t('admin.paymentChannels.channelTypes.arbitrumUsdt0'),
+    'plasma-usdt0': t('admin.paymentChannels.channelTypes.plasmaUsdt0'),
+    'x-layer-usdt0': t('admin.paymentChannels.channelTypes.xLayerUsdt0'),
+    'solana-usdc': t('admin.paymentChannels.channelTypes.solanaUsdc'),
+    'solana-usdt': t('admin.paymentChannels.channelTypes.solanaUsdt'),
+    'aptos-usdc': t('admin.paymentChannels.channelTypes.aptosUsdc'),
+    'aptos-usdt': t('admin.paymentChannels.channelTypes.aptosUsdt'),
   }
   return map[value || ''] || value || '-'
 }
@@ -110,6 +129,10 @@ const resolveChannelTypeDisplay = (channel: AdminPaymentChannel) => {
   if (channel.provider_type === 'epusdt') {
     const tradeType = String(channel.config_json?.trade_type || '').trim()
     return tradeType || 'usdt.trc20'
+  }
+  if (channel.provider_type === 'dujiaopay') {
+    const tokenID = String(channel.config_json?.token_id || channel.channel_type || '').trim()
+    return channelTypeLabel(tokenID)
   }
   return channelTypeLabel(channel.channel_type)
 }
@@ -208,11 +231,19 @@ watch(
         <div class="w-full md:w-56">
           <Select v-model="filters.providerType" @update:modelValue="handleSearch">
             <SelectTrigger class="h-9 w-full">
-            <SelectValue :placeholder="t('admin.paymentChannels.filterProviderAll')" />
+              <SelectValue :placeholder="t('admin.paymentChannels.filterProviderAll')" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">{{ t('admin.paymentChannels.filterProviderAll') }}</SelectItem>
               <SelectItem value="official">{{ t('admin.paymentChannels.providerTypes.official') }}</SelectItem>
+              <SelectItem value="dujiaopay">
+                <span class="flex w-full items-center justify-between gap-2">
+                  <span>{{ t('admin.paymentChannels.providerTypes.dujiaopay') }}</span>
+                  <span class="shrink-0 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-emerald-600 dark:text-emerald-400">
+                    {{ t('admin.paymentChannels.providerOfficialCertified') }}
+                  </span>
+                </span>
+              </SelectItem>
               <SelectItem value="epay">{{ t('admin.paymentChannels.providerTypes.epay') }}</SelectItem>
               <SelectItem value="bepusdt">{{ t('admin.paymentChannels.providerTypes.bepusdt') }}</SelectItem>
               <SelectItem value="epusdt">{{ t('admin.paymentChannels.providerTypes.epusdt') }}</SelectItem>
@@ -237,6 +268,13 @@ watch(
               <SelectItem value="usdt-trc20">{{ t('admin.paymentChannels.channelTypes.usdtTrc20') }}</SelectItem>
               <SelectItem value="usdc-trc20">{{ t('admin.paymentChannels.channelTypes.usdcTrc20') }}</SelectItem>
               <SelectItem value="trx">{{ t('admin.paymentChannels.channelTypes.trx') }}</SelectItem>
+              <SelectItem value="tron-usdt">{{ t('admin.paymentChannels.channelTypes.tronUsdt') }}</SelectItem>
+              <SelectItem value="tron-trx">{{ t('admin.paymentChannels.channelTypes.tronTrx') }}</SelectItem>
+              <SelectItem value="ethereum-usdt">{{ t('admin.paymentChannels.channelTypes.ethereumUsdt') }}</SelectItem>
+              <SelectItem value="ethereum-usdc">{{ t('admin.paymentChannels.channelTypes.ethereumUsdc') }}</SelectItem>
+              <SelectItem value="base-usdc">{{ t('admin.paymentChannels.channelTypes.baseUsdc') }}</SelectItem>
+              <SelectItem value="solana-usdt">{{ t('admin.paymentChannels.channelTypes.solanaUsdt') }}</SelectItem>
+              <SelectItem value="aptos-usdt">{{ t('admin.paymentChannels.channelTypes.aptosUsdt') }}</SelectItem>
             </SelectContent>
           </Select>
         </div>
