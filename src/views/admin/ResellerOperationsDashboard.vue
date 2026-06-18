@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { formatDate, formatMoney, toRFC3339 } from '@/utils/format'
 import {
   buildResellerOperationsAlertClass,
+  formatResellerOperationsPeriod,
   hasFinancePermission,
   normalizeCurrencyRows,
 } from '@/utils/resellerOperations'
@@ -30,12 +31,12 @@ const finance = ref<AdminResellerOperationsFinance | null>(null)
 const loadingOverview = ref(false)
 const loadingFinance = ref(false)
 const pageError = ref('')
+const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai'
 
 const filters = reactive({
   range: '7d',
   from: '',
   to: '',
-  tz: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai',
 })
 
 const canViewFinance = computed(() => hasFinancePermission((permission) => authStore.hasPermission(permission)))
@@ -73,7 +74,7 @@ const orderKpis = computed(() => {
 const buildParams = () => {
   const params: Record<string, unknown> = {
     range: filters.range,
-    tz: filters.tz,
+    tz: browserTimezone,
   }
   const from = toRFC3339(filters.from)
   const to = toRFC3339(filters.to)
@@ -144,7 +145,7 @@ onMounted(() => {
         <p class="mt-1 text-sm text-muted-foreground">{{ t('admin.resellerOperations.subtitle') }}</p>
       </div>
       <div class="rounded-xl border border-border bg-card p-3 shadow-sm">
-        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[150px_190px_190px_190px_auto] lg:items-end">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-[150px_190px_190px_auto] lg:items-end">
           <div>
             <div class="mb-1 text-xs text-muted-foreground">{{ t('admin.resellerOperations.filters.range') }}</div>
             <Select v-model="filters.range">
@@ -167,10 +168,6 @@ onMounted(() => {
             <div class="mb-1 text-xs text-muted-foreground">{{ t('admin.resellerOperations.filters.to') }}</div>
             <Input v-model="filters.to" type="datetime-local" class="h-9" />
           </div>
-          <div>
-            <div class="mb-1 text-xs text-muted-foreground">{{ t('admin.resellerOperations.filters.timezone') }}</div>
-            <Input v-model="filters.tz" class="h-9" />
-          </div>
           <Button size="sm" :disabled="loadingOverview || loadingFinance" @click="loadAll">
             <RefreshCw class="size-4" :class="{ 'animate-spin': loadingOverview || loadingFinance }" />
             {{ t('admin.resellerOperations.actions.refresh') }}
@@ -186,7 +183,7 @@ onMounted(() => {
     <section class="space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-base font-semibold">{{ t('admin.resellerOperations.sections.lifecycle') }}</h2>
-        <span v-if="overview" class="font-mono text-xs text-muted-foreground">{{ overview.from }} - {{ overview.to }}</span>
+        <span v-if="overview" class="font-mono text-xs text-muted-foreground">{{ formatResellerOperationsPeriod(overview.from, overview.to) }}</span>
       </div>
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Card v-for="item in lifecycleKpis" :key="item.label" class="rounded-lg">
