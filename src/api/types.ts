@@ -960,6 +960,19 @@ export interface AdminResellerProductSettingUpdatePayload {
   settings: AdminResellerProductSettingPayloadItem[]
 }
 
+export interface AdminResellerProductSettingPreviewItem {
+  sku_id: number
+  is_listed: boolean
+  base_price_amount: string
+  effective_price_amount: string
+  valid: boolean
+  error_code?: string
+}
+
+export interface AdminResellerProductSettingPreviewData {
+  items: AdminResellerProductSettingPreviewItem[]
+}
+
 export interface AdminResellerProfileApprovePayload {
   default_markup_percent?: string
   max_markup_percent?: string

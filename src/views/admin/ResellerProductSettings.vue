@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
@@ -8,6 +8,7 @@ import type {
   AdminResellerProductSetting,
   AdminResellerProductSettingDetail,
   AdminResellerProductSettingPayloadItem,
+  AdminResellerProductSettingPreviewData,
   AdminResellerProductSettingRule,
   AdminResellerProductSettingSKU,
 } from '@/api/types'
@@ -54,6 +55,12 @@ const selectedScope = ref<{ resellerId: number; productId: number } | null>(null
 const detail = ref<AdminResellerProductSettingDetail | null>(null)
 const productForm = ref<AdminResellerProductSettingPayloadItem>(createBlankForm(0))
 const skuForms = reactive<Record<number, AdminResellerProductSettingPayloadItem>>({})
+
+type PreviewEntry = { effective: string; valid: boolean; errorCode: string }
+// key 0 = 商品级规则，其余为 sku_id。生效价随编辑实时由后端预览接口刷新，与保存/下单口径一致。
+const previewByKey = reactive<Record<number, PreviewEntry>>({})
+let previewTimer: ReturnType<typeof setTimeout> | null = null
+let previewSeq = 0
 
 const filters = reactive({
   keyword: '',
@@ -128,6 +135,26 @@ const updateSkuForm = (skuID: number, value: AdminResellerProductSettingPayloadI
   skuForms[skuID] = value
 }
 
+const clearPreview = () => {
+  Object.keys(previewByKey).forEach((key) => delete previewByKey[Number(key)])
+}
+
+const previewEntryEffective = (value?: string | number) => {
+  const normalized = String(value ?? '').trim()
+  return normalized || ''
+}
+
+// 用已保存的生效价先行填充预览，避免打开编辑器瞬间出现空值，随后由实时预览刷新。
+const seedPreviewFromDetail = (source: AdminResellerProductSettingDetail) => {
+  clearPreview()
+  const productEffective = previewEntryEffective(source.product_setting?.effective_price_amount)
+  if (productEffective) previewByKey[0] = { effective: productEffective, valid: true, errorCode: '' }
+  source.skus.forEach((sku) => {
+    const effective = previewEntryEffective(sku.effective_price_amount ?? sku.setting?.effective_price_amount)
+    if (effective) previewByKey[sku.id] = { effective, valid: true, errorCode: '' }
+  })
+}
+
 const applyDetailToEditor = (source: AdminResellerProductSettingDetail) => {
   detail.value = source
   productForm.value = formFromRule(source.product_setting, 0)
@@ -135,7 +162,55 @@ const applyDetailToEditor = (source: AdminResellerProductSettingDetail) => {
   source.skus.forEach((sku) => {
     skuForms[sku.id] = formFromRule(sku.setting, sku.id)
   })
+  seedPreviewFromDetail(source)
+  schedulePreview()
 }
+
+const runPreview = async () => {
+  if (!selectedScope.value || !detail.value) return
+  const scope = selectedScope.value
+  const seq = ++previewSeq
+  try {
+    const response = await adminAPI.previewResellerProductSettings(scope.resellerId, scope.productId, buildPayload())
+    const data = response.data.data as AdminResellerProductSettingPreviewData
+    // 丢弃过期结果（编辑器已切换或有更新的请求在途）。
+    if (seq !== previewSeq || selectedScope.value?.resellerId !== scope.resellerId || selectedScope.value?.productId !== scope.productId) return
+    const next: Record<number, PreviewEntry> = {}
+    ;(data?.items || []).forEach((item) => {
+      next[item.sku_id] = {
+        effective: item.effective_price_amount,
+        valid: item.valid,
+        errorCode: item.error_code || '',
+      }
+    })
+    clearPreview()
+    Object.assign(previewByKey, next)
+  } catch {
+    // 预览失败静默：保留上次值；保存时后端仍会做权威校验。
+  }
+}
+
+const schedulePreview = () => {
+  if (previewTimer) clearTimeout(previewTimer)
+  previewTimer = setTimeout(runPreview, 350)
+}
+
+const previewEffectiveFor = (key: number, fallback: string) => previewByKey[key]?.effective || fallback
+const previewInvalidFor = (key: number) => previewByKey[key]?.valid === false
+const previewHintFor = (key: number) => {
+  const code = previewByKey[key]?.errorCode
+  if (!code) return ''
+  if (code === 'markup_exceeded') return t('admin.resellerProductSettings.preview.markupExceeded')
+  return t('admin.resellerProductSettings.preview.priceInvalid')
+}
+
+watch(
+  () => [productForm.value, skuForms],
+  () => {
+    if (showEditor.value && detail.value) schedulePreview()
+  },
+  { deep: true },
+)
 
 const buildPayload = () => ({
   settings: [
@@ -286,6 +361,12 @@ const resetSetting = async (row: AdminResellerProductSetting) => {
 }
 
 const closeEditor = () => {
+  if (previewTimer) {
+    clearTimeout(previewTimer)
+    previewTimer = null
+  }
+  previewSeq++
+  clearPreview()
   selectedScope.value = null
   detail.value = null
   productForm.value = createBlankForm(0)
@@ -443,7 +524,7 @@ onMounted(() => {
               <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerProductSettings.columns.product') }}</h2>
               <span class="text-xs text-muted-foreground">#{{ detail.product.id }} / {{ detail.product.slug }}</span>
             </div>
-            <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_120px_170px_repeat(3,minmax(120px,1fr))_96px] lg:items-end">
+            <div class="grid gap-3 lg:grid-cols-[minmax(180px,1fr)_120px_170px_repeat(3,minmax(120px,1fr))_minmax(150px,170px)] lg:items-end">
               <div>
                 <Label>{{ t('admin.resellerProductSettings.columns.product') }}</Label>
                 <div class="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
@@ -480,10 +561,14 @@ onMounted(() => {
                 <Input v-model="productForm.fixed_price_amount" class="mt-2 h-9 font-mono" />
               </div>
               <div>
-                <Label>{{ t('admin.resellerProductSettings.columns.pricingValue') }}</Label>
-                <div class="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-sm text-muted-foreground">
-                  {{ pricingValue(productForm) }}
+                <Label>{{ t('admin.resellerProductSettings.preview.effectivePrice') }}</Label>
+                <div
+                  class="mt-2 rounded-md border px-3 py-2 font-mono text-sm"
+                  :class="previewInvalidFor(0) ? 'border-destructive/40 bg-destructive/5 text-destructive' : 'border-border bg-muted/30 text-foreground'"
+                >
+                  {{ previewEffectiveFor(0, '-') }}
                 </div>
+                <p v-if="previewInvalidFor(0)" class="mt-1 text-xs text-destructive">{{ previewHintFor(0) }}</p>
               </div>
             </div>
           </section>
@@ -494,7 +579,7 @@ onMounted(() => {
               <div
                 v-for="sku in detail.skus"
                 :key="sku.id"
-                class="grid gap-3 rounded-md border border-border p-3 lg:grid-cols-[minmax(180px,1fr)_120px_170px_repeat(3,minmax(120px,1fr))_96px] lg:items-end"
+                class="grid gap-3 rounded-md border border-border p-3 lg:grid-cols-[minmax(180px,1fr)_120px_170px_repeat(3,minmax(120px,1fr))_minmax(150px,170px)] lg:items-end"
               >
                 <div>
                   <Label>{{ t('admin.resellerProductSettings.columns.sku') }}</Label>
@@ -532,10 +617,14 @@ onMounted(() => {
                   <Input :model-value="skuFormFor(sku.id).fixed_price_amount" class="mt-2 h-9 font-mono" @update:modelValue="(value) => updateSkuForm(sku.id, { ...skuFormFor(sku.id), fixed_price_amount: String(value) })" />
                 </div>
                 <div>
-                  <Label>{{ t('admin.resellerProductSettings.columns.pricingValue') }}</Label>
-                  <div class="mt-2 rounded-md border border-border bg-muted/30 px-3 py-2 font-mono text-sm text-muted-foreground">
-                    {{ pricingValue(skuFormFor(sku.id)) }}
+                  <Label>{{ t('admin.resellerProductSettings.preview.effectivePrice') }}</Label>
+                  <div
+                    class="mt-2 rounded-md border px-3 py-2 font-mono text-sm"
+                    :class="previewInvalidFor(sku.id) ? 'border-destructive/40 bg-destructive/5 text-destructive' : 'border-border bg-muted/30 text-foreground'"
+                  >
+                    {{ previewEffectiveFor(sku.id, '-') }}
                   </div>
+                  <p v-if="previewInvalidFor(sku.id)" class="mt-1 text-xs text-destructive">{{ previewHintFor(sku.id) }}</p>
                 </div>
               </div>
             </div>

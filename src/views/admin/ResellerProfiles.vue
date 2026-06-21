@@ -149,11 +149,11 @@ const validateMarkupRange = (defaultMarkup: string, maxMarkup: string) => {
   const defaultValue = Number(defaultMarkup.trim() || '0')
   const maxValue = Number(maxMarkup.trim() || '0')
   if (!Number.isFinite(defaultValue) || !Number.isFinite(maxValue) || defaultValue < 0 || maxValue < 0) {
-    notifyError('加价比例必须是大于或等于 0 的数字')
+    notifyError(t('admin.resellerProfiles.actions.markupInvalid'))
     return false
   }
   if (maxValue > 0 && defaultValue > maxValue) {
-    notifyError('默认加价比例不能大于封顶加价比例')
+    notifyError(t('admin.resellerProfiles.actions.markupRangeInvalid'))
     return false
   }
   return true
@@ -233,10 +233,10 @@ const submitEditProfile = async () => {
       reason: editForm.reason.trim() || undefined,
     })
     showEditDialog.value = false
-    notifySuccess('分销商运营配置已更新')
+    notifySuccess(t('admin.resellerProfiles.actions.updateSuccess'))
     await fetchRows(pagination.value.page, { preserveRows: true })
   } catch (err: any) {
-    notifyError(err?.message || '保存分销商运营配置失败')
+    notifyError(err?.message || t('admin.resellerProfiles.actions.updateFailed'))
   } finally {
     operatingId.value = null
   }
@@ -380,7 +380,7 @@ onMounted(() => {
                   as="a"
                   :href="profileDetailLink(item.id)"
                 >
-                  详情
+                  {{ t('admin.resellerProfiles.actions.detail') }}
                 </Button>
                 <Button
                   size="sm"
@@ -388,7 +388,7 @@ onMounted(() => {
                   :disabled="operatingId === item.id"
                   @click="openEditDialog(item)"
                 >
-                  编辑
+                  {{ t('admin.common.edit') }}
                 </Button>
                 <Button
                   size="sm"
@@ -441,7 +441,7 @@ onMounted(() => {
     <Dialog v-model:open="showApproveDialog">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-md p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>审核通过分销商 R#{{ selectedProfile?.id || '-' }}</DialogTitle>
+          <DialogTitle>{{ t('admin.resellerProfiles.actions.approveDialogTitle', { id: selectedProfile?.id || '-' }) }}</DialogTitle>
         </DialogHeader>
         <div class="space-y-4">
           <div class="grid gap-2">
@@ -451,11 +451,11 @@ onMounted(() => {
           <div class="grid gap-2">
             <Label>{{ t('admin.resellerProfiles.table.maxMarkup') }}</Label>
             <Input v-model="approveForm.maxMarkup" inputmode="decimal" placeholder="0.00" />
-            <p class="text-xs text-muted-foreground">填写 0 表示不限制封顶加价。</p>
+            <p class="text-xs text-muted-foreground">{{ t('admin.resellerProfiles.actions.maxMarkupZeroHint') }}</p>
           </div>
           <div class="flex justify-end gap-2">
-            <Button variant="outline" @click="showApproveDialog = false">取消</Button>
-            <Button :disabled="operatingId === selectedProfile?.id" @click="submitApproveProfile">确认通过</Button>
+            <Button variant="outline" @click="showApproveDialog = false">{{ t('admin.common.cancel') }}</Button>
+            <Button :disabled="operatingId === selectedProfile?.id" @click="submitApproveProfile">{{ t('admin.resellerProfiles.actions.approveConfirm') }}</Button>
           </div>
         </div>
       </DialogScrollContent>
@@ -464,7 +464,7 @@ onMounted(() => {
     <Dialog v-model:open="showReasonDialog">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-md p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>{{ reasonAction === 'reject' ? '拒绝分销商申请' : '禁用分销商' }} R#{{ selectedProfile?.id || '-' }}</DialogTitle>
+          <DialogTitle>{{ reasonAction === 'reject' ? t('admin.resellerProfiles.actions.rejectDialogTitle', { id: selectedProfile?.id || '-' }) : t('admin.resellerProfiles.actions.disableDialogTitle', { id: selectedProfile?.id || '-' }) }}</DialogTitle>
         </DialogHeader>
         <div class="space-y-4">
           <div class="grid gap-2">
@@ -472,9 +472,9 @@ onMounted(() => {
             <Textarea v-model="reasonForm.reason" rows="4" />
           </div>
           <div class="flex justify-end gap-2">
-            <Button variant="outline" @click="showReasonDialog = false">取消</Button>
+            <Button variant="outline" @click="showReasonDialog = false">{{ t('admin.common.cancel') }}</Button>
             <Button :variant="reasonAction === 'disable' ? 'destructive' : 'default'" :disabled="operatingId === selectedProfile?.id" @click="submitReasonAction">
-              {{ reasonAction === 'reject' ? '确认拒绝' : '确认禁用' }}
+              {{ reasonAction === 'reject' ? t('admin.resellerProfiles.actions.confirmReject') : t('admin.resellerProfiles.actions.confirmDisable') }}
             </Button>
           </div>
         </div>
@@ -484,7 +484,7 @@ onMounted(() => {
     <Dialog v-model:open="showEditDialog">
       <DialogScrollContent class="w-[calc(100vw-1rem)] max-w-lg p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>编辑分销商运营配置 R#{{ selectedProfile?.id || '-' }}</DialogTitle>
+          <DialogTitle>{{ t('admin.resellerProfiles.actions.editDialogTitle', { id: selectedProfile?.id || '-' }) }}</DialogTitle>
         </DialogHeader>
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="grid gap-2">
@@ -508,13 +508,13 @@ onMounted(() => {
             </Select>
           </div>
           <div class="grid gap-2 sm:col-span-2">
-            <Label>操作原因</Label>
+            <Label>{{ t('admin.resellerProfiles.actions.operationReason') }}</Label>
             <Textarea v-model="editForm.reason" rows="3" />
           </div>
-          <p class="text-xs text-muted-foreground sm:col-span-2">封顶加价填写 0 表示不限制封顶；这里只更新分销商运营配置，不处理余额冻结或手动调账。</p>
+          <p class="text-xs text-muted-foreground sm:col-span-2">{{ t('admin.resellerProfiles.actions.editHint') }}</p>
           <div class="flex justify-end gap-2 sm:col-span-2">
-            <Button variant="outline" @click="showEditDialog = false">取消</Button>
-            <Button :disabled="operatingId === selectedProfile?.id" @click="submitEditProfile">保存配置</Button>
+            <Button variant="outline" @click="showEditDialog = false">{{ t('admin.common.cancel') }}</Button>
+            <Button :disabled="operatingId === selectedProfile?.id" @click="submitEditProfile">{{ t('admin.resellerProfiles.actions.saveConfig') }}</Button>
           </div>
         </div>
       </DialogScrollContent>

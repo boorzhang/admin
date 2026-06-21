@@ -9,14 +9,19 @@ import type {
   AdminResellerSiteConfig,
   AdminResellerSiteConfigPayload,
 } from '@/api/types'
+import { Info, CircleCheck, CircleAlert } from 'lucide-vue-next'
 import IdCell from '@/components/IdCell.vue'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
+import RichEditor from '@/components/RichEditor.vue'
+import ResellerLocaleSwitch from '@/components/admin/ResellerLocaleSwitch.vue'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogScrollContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import TableSkeleton from '@/components/TableSkeleton.vue'
 import ListPagination from '@/components/ListPagination.vue'
@@ -31,7 +36,7 @@ import {
   getLocalizedText,
   normalizeFooterLinksForForm,
   normalizeLocalizedTextForForm,
-  resellerLocales,
+  type ResellerLocale,
   type ResellerLocalizedText,
 } from '@/utils/resellerSiteConfig'
 
@@ -96,6 +101,19 @@ const initFiltersFromQuery = () => {
 
 const pageSizeOptions = [10, 20, 50, 100]
 const navBuiltinKeys = ['blog', 'notice', 'about']
+
+const activeTab = ref<'brand' | 'announcement' | 'support' | 'seo' | 'footer' | 'nav'>('brand')
+const activeLocale = ref<ResellerLocale>('zh-CN')
+const localeLabels: Record<ResellerLocale, string> = {
+  'zh-CN': '简体',
+  'zh-TW': '繁體',
+  'en-US': 'EN',
+}
+const announcementTypeOptions = [
+  { value: 'info', icon: Info, iconClass: 'text-primary' },
+  { value: 'success', icon: CircleCheck, iconClass: 'text-success' },
+  { value: 'warning', icon: CircleAlert, iconClass: 'text-warning' },
+]
 
 const createBlankForm = (): ResellerSiteConfigForm => ({
   site_name: '',
@@ -266,6 +284,8 @@ const openEditor = async (row: AdminResellerSiteConfig) => {
     const latest = response.data.data as AdminResellerSiteConfig
     selectedRow.value = latest
     assignForm(normalizeConfigForForm(latest))
+    activeTab.value = 'brand'
+    activeLocale.value = 'zh-CN'
     showEditor.value = true
   } catch (err: any) {
     notifyError(err?.message || t('admin.resellerSiteConfigs.messages.loadFailed'))
@@ -430,12 +450,23 @@ onMounted(() => {
           <DialogTitle>{{ t('admin.resellerSiteConfigs.editor.title', { id: selectedRow?.reseller_id || '-' }) }}</DialogTitle>
         </DialogHeader>
 
-        <div class="grid gap-5 lg:grid-cols-[1fr_1fr]">
-          <section class="space-y-4 rounded-lg border border-border p-4">
-            <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.brand') }}</h2>
-            <div class="grid gap-3">
+        <Tabs v-model="activeTab" class="mt-2">
+          <TabsList class="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/40 p-1">
+            <TabsTrigger value="brand" class="flex-none">{{ t('admin.resellerSiteConfigs.editor.sections.brand') }}</TabsTrigger>
+            <TabsTrigger value="announcement" class="flex-none">{{ t('admin.resellerSiteConfigs.editor.sections.announcement') }}</TabsTrigger>
+            <TabsTrigger value="support" class="flex-none">{{ t('admin.resellerSiteConfigs.editor.sections.support') }}</TabsTrigger>
+            <TabsTrigger value="seo" class="flex-none">{{ t('admin.resellerSiteConfigs.editor.sections.seo') }}</TabsTrigger>
+            <TabsTrigger value="footer" class="flex-none">{{ t('admin.resellerSiteConfigs.editor.sections.footer') }}</TabsTrigger>
+            <TabsTrigger value="nav" class="flex-none">{{ t('admin.resellerSiteConfigs.editor.sections.nav') }}</TabsTrigger>
+          </TabsList>
+
+          <!-- 品牌 -->
+          <TabsContent value="brand" class="mt-4 space-y-4">
+            <div class="grid gap-2">
               <Label>{{ t('admin.resellerSiteConfigs.fields.siteName') }}</Label>
               <Input v-model="form.site_name" />
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
               <div class="grid gap-2">
                 <Label>{{ t('admin.resellerSiteConfigs.fields.logo') }}</Label>
                 <MediaPicker v-model="form.logo" scene="reseller" />
@@ -445,95 +476,122 @@ onMounted(() => {
                 <MediaPicker v-model="form.favicon" scene="reseller" />
               </div>
             </div>
-          </section>
+          </TabsContent>
 
-          <section class="space-y-4 rounded-lg border border-border p-4">
-            <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.support') }}</h2>
-            <div class="grid gap-3">
-              <Label>{{ t('admin.resellerSiteConfigs.fields.telegram') }}</Label>
-              <Input v-model="form.support.telegram" />
-              <Label>{{ t('admin.resellerSiteConfigs.fields.whatsapp') }}</Label>
-              <Input v-model="form.support.whatsapp" />
-              <Label>{{ t('admin.resellerSiteConfigs.fields.email') }}</Label>
-              <Input v-model="form.support.email" />
-              <Label>{{ t('admin.resellerSiteConfigs.fields.supportUrl') }}</Label>
-              <Input v-model="form.support.support_url" />
-            </div>
-          </section>
-
-          <section class="space-y-4 rounded-lg border border-border p-4">
-            <div class="flex items-center justify-between gap-3">
-              <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.announcement') }}</h2>
+          <!-- 公告 -->
+          <TabsContent value="announcement" class="mt-4 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 p-3">
               <div class="flex items-center gap-2">
                 <Switch v-model="form.announcement.enabled" />
                 <span class="text-sm text-muted-foreground">{{ t('admin.resellerSiteConfigs.fields.announcementEnabled') }}</span>
               </div>
+              <div class="grid gap-1">
+                <span class="text-xs text-muted-foreground">{{ t('admin.resellerSiteConfigs.fields.announcementType') }}</span>
+                <Select v-model="form.announcement.type">
+                  <SelectTrigger class="h-9 w-44"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="opt in announcementTypeOptions" :key="opt.value" :value="opt.value">
+                      <span class="flex items-center gap-2">
+                        <component :is="opt.icon" class="h-4 w-4" :class="opt.iconClass" />
+                        {{ t(`admin.resellerSiteConfigs.announcementTypes.${opt.value}`) }}
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div class="grid gap-3">
-              <Label>{{ t('admin.resellerSiteConfigs.fields.announcementType') }}</Label>
-              <Input v-model="form.announcement.type" />
-              <template v-for="lang in resellerLocales" :key="`announcement-${lang}`">
-                <Label>{{ t('admin.resellerSiteConfigs.fields.announcementTitle') }} · {{ lang }}</Label>
-                <Input v-model="form.announcement.title[lang]" />
-                <Label>{{ t('admin.resellerSiteConfigs.fields.announcementContent') }} · {{ lang }}</Label>
-                <Textarea v-model="form.announcement.content[lang]" rows="2" />
-              </template>
+            <div class="flex items-center justify-between gap-3">
+              <Label>{{ t('admin.resellerSiteConfigs.editor.language') }}</Label>
+              <ResellerLocaleSwitch v-model="activeLocale" :labels="localeLabels" />
             </div>
-          </section>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.announcementTitle') }}</Label>
+              <Input v-model="form.announcement.title[activeLocale]" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.announcementContent') }}</Label>
+              <RichEditor :key="`ann-${activeLocale}`" v-model="form.announcement.content[activeLocale]" />
+            </div>
+          </TabsContent>
 
-          <section class="space-y-4 rounded-lg border border-border p-4">
-            <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.seo') }}</h2>
-            <div class="grid gap-3">
-              <template v-for="lang in resellerLocales" :key="`seo-${lang}`">
-                <Label>{{ t('admin.resellerSiteConfigs.fields.seoTitle') }} · {{ lang }}</Label>
-                <Input v-model="form.seo.title[lang]" />
-                <Label>{{ t('admin.resellerSiteConfigs.fields.seoKeywords') }} · {{ lang }}</Label>
-                <Input v-model="form.seo.keywords[lang]" />
-                <Label>{{ t('admin.resellerSiteConfigs.fields.seoDescription') }} · {{ lang }}</Label>
-                <Textarea v-model="form.seo.description[lang]" rows="2" />
-              </template>
+          <!-- 联系方式 -->
+          <TabsContent value="support" class="mt-4 grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.telegram') }}</Label>
+              <Input v-model="form.support.telegram" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.whatsapp') }}</Label>
+              <Input v-model="form.support.whatsapp" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.email') }}</Label>
+              <Input v-model="form.support.email" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.supportUrl') }}</Label>
+              <Input v-model="form.support.support_url" />
+            </div>
+          </TabsContent>
+
+          <!-- SEO -->
+          <TabsContent value="seo" class="mt-4 space-y-4">
+            <div class="flex items-center justify-between gap-3">
+              <Label>{{ t('admin.resellerSiteConfigs.editor.language') }}</Label>
+              <ResellerLocaleSwitch v-model="activeLocale" :labels="localeLabels" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.seoTitle') }}</Label>
+              <Input v-model="form.seo.title[activeLocale]" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.seoKeywords') }}</Label>
+              <Input v-model="form.seo.keywords[activeLocale]" />
+            </div>
+            <div class="grid gap-2">
+              <Label>{{ t('admin.resellerSiteConfigs.fields.seoDescription') }}</Label>
+              <Textarea v-model="form.seo.description[activeLocale]" rows="3" />
+            </div>
+            <div class="grid gap-2">
               <Label>{{ t('admin.resellerSiteConfigs.fields.ogImage') }}</Label>
               <MediaPicker v-model="form.seo.default_og_image" scene="reseller" />
             </div>
-          </section>
+          </TabsContent>
 
-          <section class="space-y-4 rounded-lg border border-border p-4">
-            <div class="flex items-center justify-between gap-3">
-              <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.footer') }}</h2>
+          <!-- 页脚链接 -->
+          <TabsContent value="footer" class="mt-4 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <ResellerLocaleSwitch v-model="activeLocale" :labels="localeLabels" />
               <Button type="button" size="sm" variant="outline" @click="addFooterLink">
                 {{ t('admin.resellerSiteConfigs.actions.addLink') }}
               </Button>
             </div>
             <div v-if="form.footer_links.length" class="space-y-3">
-              <div v-for="(link, index) in form.footer_links" :key="index" class="space-y-3 rounded-md border border-border p-3">
-                <div class="grid gap-3 sm:grid-cols-3">
-                  <div v-for="lang in resellerLocales" :key="`link-${index}-${lang}`" class="space-y-1">
-                    <Label>{{ t('admin.resellerSiteConfigs.fields.linkName') }} · {{ lang }}</Label>
-                    <Input v-model="link.name[lang]" />
-                  </div>
+              <div v-for="(link, index) in form.footer_links" :key="index" class="grid gap-3 rounded-md border border-border p-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                <div class="grid gap-1">
+                  <Label>{{ t('admin.resellerSiteConfigs.fields.linkName') }} · {{ localeLabels[activeLocale] }}</Label>
+                  <Input v-model="link.name[activeLocale]" />
                 </div>
-                <Label>{{ t('admin.resellerSiteConfigs.fields.linkUrl') }}</Label>
-                <Input v-model="link.url" />
-                <div class="flex justify-end">
-                  <Button type="button" size="sm" variant="outline" class="text-destructive" @click="removeFooterLink(index)">
-                    {{ t('admin.resellerSiteConfigs.actions.removeLink') }}
-                  </Button>
+                <div class="grid gap-1">
+                  <Label>{{ t('admin.resellerSiteConfigs.fields.linkUrl') }}</Label>
+                  <Input v-model="link.url" />
                 </div>
+                <Button type="button" size="sm" variant="outline" class="text-destructive" @click="removeFooterLink(index)">
+                  {{ t('admin.resellerSiteConfigs.actions.removeLink') }}
+                </Button>
               </div>
             </div>
             <p v-else class="text-sm text-muted-foreground">{{ t('admin.resellerSiteConfigs.emptyLinks') }}</p>
-          </section>
+          </TabsContent>
 
-          <section class="space-y-4 rounded-lg border border-border p-4">
-            <h2 class="text-sm font-semibold text-foreground">{{ t('admin.resellerSiteConfigs.editor.sections.nav') }}</h2>
-            <div class="grid gap-3">
-              <div v-for="key in navBuiltinKeys" :key="key" class="flex items-center justify-between rounded-md border border-border px-3 py-2">
-                <span class="text-sm text-foreground">{{ t(`admin.resellerSiteConfigs.navItems.${key}`) }}</span>
-                <Switch v-model="form.nav_config.builtin[key]" />
-              </div>
+          <!-- 导航 -->
+          <TabsContent value="nav" class="mt-4 space-y-3">
+            <div v-for="key in navBuiltinKeys" :key="key" class="flex items-center justify-between rounded-md border border-border px-3 py-2">
+              <span class="text-sm text-foreground">{{ t(`admin.resellerSiteConfigs.navItems.${key}`) }}</span>
+              <Switch v-model="form.nav_config.builtin[key]" />
             </div>
-          </section>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
           <Button variant="outline" :disabled="saving" @click="showEditor = false">
