@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { adminAPI } from '@/api/admin'
 import type { AdminPost, AdminProduct, LocalizedText } from '@/api/types'
 import MediaPicker from '@/components/admin/MediaPicker.vue'
@@ -38,18 +38,22 @@ interface CategoryItem {
 }
 
 const { t } = useI18n()
+const route = useRoute()
+const router = useRouter()
 const loading = ref(false)
 const showModal = ref(false)
 const isEditing = ref(false)
-const currentTab = ref('blog')
+const currentTab = ref(route.params.type === 'notice' ? 'notice' : 'blog')
 const currentLang = ref('zh-CN')
 const submitting = ref(false)
 
-watch(currentTab, () => {
+watch(currentTab, (tab) => {
   pagination.page = 1
   fetchPosts()
+  if (route.params.type !== tab) {
+    router.replace(`/posts/${tab}`)
+  }
 })
-const route = useRoute()
 
 const languages = computed(() => [
   { code: 'zh-CN', name: t('admin.common.lang.zhCN') },
@@ -333,9 +337,6 @@ const openEditById = async (rawId: unknown) => {
 }
 
 onMounted(() => {
-  if (route.params.type === 'notice') {
-    currentTab.value = 'notice'
-  }
   fetchCategories()
   fetchPosts()
   if (route.query.post_id) {
@@ -386,7 +387,7 @@ watch(
         <TableHeader class="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
           <TableRow>
             <TableHead class="px-6 py-3">{{ t('admin.posts.table.id') }}</TableHead>
-            <TableHead class="w-32 px-6 py-3">{{ t('admin.posts.table.category') }}</TableHead>
+            <TableHead v-if="currentTab === 'blog'" class="w-32 px-6 py-3">{{ t('admin.posts.table.category') }}</TableHead>
             <TableHead class="min-w-[280px] px-6 py-3">{{ t('admin.posts.table.title') }}</TableHead>
             <TableHead class="min-w-[220px] px-6 py-3">{{ t('admin.posts.table.slug') }}</TableHead>
             <TableHead class="min-w-[120px] px-6 py-3">{{ t('admin.posts.table.status') }}</TableHead>
@@ -396,18 +397,18 @@ watch(
         </TableHeader>
         <TableBody class="divide-y divide-border">
           <TableRow v-if="loading">
-            <TableCell :colspan="7" class="p-0">
-              <TableSkeleton :columns="7" :rows="5" />
+            <TableCell :colspan="currentTab === 'blog' ? 7 : 6" class="p-0">
+              <TableSkeleton :columns="currentTab === 'blog' ? 7 : 6" :rows="5" />
             </TableCell>
           </TableRow>
           <TableRow v-else-if="posts.length === 0">
-            <TableCell colspan="7" class="px-6 py-8 text-center text-muted-foreground">{{ t('admin.posts.empty') }}</TableCell>
+            <TableCell :colspan="currentTab === 'blog' ? 7 : 6" class="px-6 py-8 text-center text-muted-foreground">{{ t('admin.posts.empty') }}</TableCell>
           </TableRow>
           <TableRow v-for="post in posts" :key="post.id" class="hover:bg-muted/30">
             <TableCell class="px-6 py-4">
               <IdCell :value="post.id" />
             </TableCell>
-            <TableCell class="px-6 py-4">
+            <TableCell v-if="currentTab === 'blog'" class="px-6 py-4">
               <span class="text-sm text-muted-foreground">{{ getCategoryName(post.category_id) }}</span>
             </TableCell>
             <TableCell class="min-w-[280px] px-6 py-4">
