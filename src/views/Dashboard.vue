@@ -121,11 +121,45 @@ const loadingOverview = ref(false)
 const loadingTrends = ref(false)
 const loadingRankings = ref(false)
 const loadingInventoryAlerts = ref(false)
+const loadingDimensions = ref(false)
 const dashboardError = ref('')
 const overview = ref<DashboardOverview | null>(null)
 const trends = ref<DashboardTrends | null>(null)
 const rankings = ref<DashboardRankings | null>(null)
 const inventoryAlerts = ref<AdminDashboardInventoryAlert[]>([])
+
+interface DashboardDimensionsBucket {
+  key: string
+  total: number
+  paid: number
+}
+interface DashboardDimensionsMerchant {
+  merchant_id: number | null
+  slug: string
+  name: string
+  total: number
+  paid: number
+  paid_amount: number | string
+}
+interface DashboardDimensionsContact {
+  contact: string
+  merchant_slug: string
+  order_count: number
+  device_os: string
+  browser: string
+  last_paid_at?: string | null
+  last_created_at?: string | null
+}
+interface DashboardDimensions {
+  hours: number
+  since: string
+  by_merchant: DashboardDimensionsMerchant[]
+  by_os: DashboardDimensionsBucket[]
+  by_browser: DashboardDimensionsBucket[]
+  recent_contacts: DashboardDimensionsContact[]
+}
+const dimensions = ref<DashboardDimensions | null>(null)
+const dimensionHours = ref<number>(24)
 
 const filters = reactive({
   range: '7d',
@@ -282,10 +316,41 @@ const loadInventoryAlerts = async () => {
   }
 }
 
+const loadDimensions = async () => {
+  loadingDimensions.value = true
+  try {
+    const response = await adminAPI.getDashboardDimensions({ hours: dimensionHours.value })
+    dimensions.value = response.data.data as unknown as DashboardDimensions
+  } catch {
+    dimensions.value = null
+  } finally {
+    loadingDimensions.value = false
+  }
+}
+
+const handleDimensionHoursChange = (value: unknown) => {
+  const next = Number(value)
+  if (!Number.isFinite(next) || next <= 0) return
+  dimensionHours.value = next
+  loadDimensions()
+}
+
+const formatLastSeen = (iso?: string | null) => {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleString(undefined, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+const conversionPct = (paid: number, total: number) => {
+  if (!total) return '0.0'
+  return ((paid * 100) / total).toFixed(1)
+}
+
 const loadDashboard = async (forceRefresh = false) => {
   dashboardError.value = ''
   try {
-    await Promise.all([loadOverview(forceRefresh), loadTrends(forceRefresh), loadRankings(forceRefresh), loadInventoryAlerts()])
+    await Promise.all([loadOverview(forceRefresh), loadTrends(forceRefresh), loadRankings(forceRefresh), loadInventoryAlerts(), loadDimensions()])
   } catch (error: any) {
     dashboardError.value = error?.message || t('admin.dashboard.errors.fetchFailed')
   }
@@ -753,6 +818,130 @@ onMounted(() => {
         </CardContent>
       </Card>
     </div>
+
+    <!-- 实时维度面板（按商户/OS/浏览器分布 + 最近活跃账户）。时间窗独立，默认 24h。 -->
+    <div class="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
+      <h2 class="text-base font-semibold">实时维度（订单按商户 / OS / 浏览器分布）</h2>
+      <div class="w-[140px]">
+        <Select :model-value="String(dimensionHours)" @update:modelValue="handleDimensionHoursChange">
+          <SelectTrigger class="h-9">
+            <SelectValue placeholder="时间窗" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1">近 1 小时</SelectItem>
+            <SelectItem value="6">近 6 小时</SelectItem>
+            <SelectItem value="12">近 12 小时</SelectItem>
+            <SelectItem value="24">近 24 小时</SelectItem>
+            <SelectItem value="72">近 3 天</SelectItem>
+            <SelectItem value="168">近 7 天</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+
+    <div class="grid gap-4 xl:grid-cols-3 [&>*]:min-w-0">
+      <Card class="min-w-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm">按商户 / 域名分布</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div v-if="loadingDimensions" class="text-sm text-muted-foreground">{{ t('admin.common.loading') }}</div>
+          <div v-else-if="!dimensions || dimensions.by_merchant.length === 0" class="text-sm text-muted-foreground">暂无订单</div>
+          <div v-else class="space-y-2">
+            <div v-for="item in dimensions.by_merchant" :key="item.slug" class="rounded-lg border border-border px-3 py-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="min-w-0 truncate text-sm font-medium">{{ item.name }}</span>
+                <span class="shrink-0 font-mono text-xs text-muted-foreground">{{ item.slug }}</span>
+              </div>
+              <div class="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>新单 {{ item.total }} / 支付 {{ item.paid }}</span>
+                <span class="font-semibold text-foreground">{{ conversionPct(item.paid, item.total) }}%</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="min-w-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm">按操作系统分布</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div v-if="loadingDimensions" class="text-sm text-muted-foreground">{{ t('admin.common.loading') }}</div>
+          <div v-else-if="!dimensions || dimensions.by_os.length === 0" class="text-sm text-muted-foreground">暂无数据</div>
+          <div v-else class="space-y-2">
+            <div v-for="item in dimensions.by_os" :key="item.key" class="rounded-lg border border-border px-3 py-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-medium uppercase">{{ item.key }}</span>
+                <span class="font-mono text-xs">{{ item.total }} 单</span>
+              </div>
+              <div class="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>已支付 {{ item.paid }}</span>
+                <span class="font-semibold text-foreground">{{ conversionPct(item.paid, item.total) }}%</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card class="min-w-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm">按浏览器分布</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div v-if="loadingDimensions" class="text-sm text-muted-foreground">{{ t('admin.common.loading') }}</div>
+          <div v-else-if="!dimensions || dimensions.by_browser.length === 0" class="text-sm text-muted-foreground">暂无数据</div>
+          <div v-else class="space-y-2">
+            <div v-for="item in dimensions.by_browser" :key="item.key" class="rounded-lg border border-border px-3 py-2">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-sm font-medium uppercase">{{ item.key }}</span>
+                <span class="font-mono text-xs">{{ item.total }} 单</span>
+              </div>
+              <div class="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                <span>已支付 {{ item.paid }}</span>
+                <span class="font-semibold text-foreground">{{ conversionPct(item.paid, item.total) }}%</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+
+    <Card class="min-w-0">
+      <CardHeader class="pb-2">
+        <CardTitle class="text-sm">最近活跃账户（邮箱 / QQ / 手机号）</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div v-if="loadingDimensions" class="text-sm text-muted-foreground">{{ t('admin.common.loading') }}</div>
+        <div v-else-if="!dimensions || dimensions.recent_contacts.length === 0" class="text-sm text-muted-foreground">暂无活跃账户</div>
+        <div v-else class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-muted-foreground">
+                <th class="py-2 pr-3">账户</th>
+                <th class="py-2 pr-3">商户</th>
+                <th class="py-2 pr-3">订单数</th>
+                <th class="py-2 pr-3">操作系统</th>
+                <th class="py-2 pr-3">浏览器</th>
+                <th class="py-2 pr-3">最近支付</th>
+                <th class="py-2">最近下单</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in dimensions.recent_contacts" :key="`${item.contact}-${item.merchant_slug}`" class="border-t border-border">
+                <td class="break-all py-2 pr-3 font-mono text-xs">{{ item.contact }}</td>
+                <td class="py-2 pr-3 text-xs text-muted-foreground">{{ item.merchant_slug }}</td>
+                <td class="py-2 pr-3">{{ item.order_count }}</td>
+                <td class="py-2 pr-3 text-xs uppercase">{{ item.device_os }}</td>
+                <td class="py-2 pr-3 text-xs uppercase">{{ item.browser }}</td>
+                <td class="py-2 pr-3 text-xs">{{ formatLastSeen(item.last_paid_at) }}</td>
+                <td class="py-2 text-xs">{{ formatLastSeen(item.last_created_at) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
 
   </div>
 </template>
