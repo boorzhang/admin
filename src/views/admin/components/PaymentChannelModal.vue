@@ -135,6 +135,7 @@ const bepusdtConfig = reactive({
   auth_token: '',
   order_mode: 'transaction',
   trade_type: 'usdt.trc20',
+  currencies: '',
   fiat: 'CNY',
   notify_url: '',
   return_url: '',
@@ -417,6 +418,7 @@ const resetBepusdtConfig = () => {
   bepusdtConfig.auth_token = ''
   bepusdtConfig.order_mode = 'transaction'
   bepusdtConfig.trade_type = 'usdt.trc20'
+  bepusdtConfig.currencies = ''
   bepusdtConfig.fiat = 'CNY'
   bepusdtConfig.notify_url = 'https://api.yourdomain.com/api/v1/payments/callback'
   bepusdtConfig.return_url = 'https://yourdomain.com/pay'
@@ -554,6 +556,7 @@ const applyBepusdtConfig = (raw: Record<string, unknown>) => {
   bepusdtConfig.auth_token = String(raw.auth_token || '')
   bepusdtConfig.order_mode = String(raw.order_mode || 'transaction') === 'cashier' ? 'cashier' : 'transaction'
   bepusdtConfig.trade_type = bepusdtConfig.order_mode === 'cashier' ? String(raw.trade_type || '') : String(raw.trade_type || 'usdt.trc20')
+  bepusdtConfig.currencies = bepusdtConfig.order_mode === 'cashier' ? String(raw.currencies || '') : ''
   bepusdtConfig.fiat = String(raw.fiat || 'CNY')
   bepusdtConfig.notify_url = String(raw.notify_url || '')
   bepusdtConfig.return_url = String(raw.return_url || '')
@@ -738,6 +741,10 @@ const buildBepusdtConfig = () => {
   if (config.order_mode !== 'cashier' && tradeType !== '') {
     config.trade_type = tradeType
   }
+  const currencies = String(bepusdtConfig.currencies || '').trim().toUpperCase().replace(/\s+/g, '')
+  if (config.order_mode === 'cashier' && currencies !== '') {
+    config.currencies = currencies
+  }
   const fiat = String(bepusdtConfig.fiat || '').trim()
   if (fiat !== '') {
     config.fiat = fiat
@@ -889,6 +896,7 @@ watch(
       bepusdtConfig.trade_type = ''
       form.channel_type = 'bepusdt'
     } else {
+      bepusdtConfig.currencies = ''
       if (String(bepusdtConfig.trade_type || '').trim() === '') {
         bepusdtConfig.trade_type = 'usdt.trc20'
       }
@@ -1543,6 +1551,10 @@ const closeModal = () => {
             <div v-if="bepusdtConfig.order_mode !== 'cashier'" class="min-w-0">
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.bepusdtTradeType') }}</label>
               <Input v-model="bepusdtConfig.trade_type" :placeholder="t('admin.paymentChannels.modal.bepusdtTradeTypePlaceholder')" />
+            </div>
+            <div v-if="bepusdtConfig.order_mode === 'cashier'" class="min-w-0 md:col-span-2">
+              <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.bepusdtCurrencies') }}</label>
+              <Input v-model="bepusdtConfig.currencies" :placeholder="t('admin.paymentChannels.modal.bepusdtCurrenciesPlaceholder')" />
             </div>
             <div class="min-w-0">
               <label class="block text-xs font-medium text-muted-foreground mb-1.5">{{ t('admin.paymentChannels.modal.bepusdtFiat') }}</label>
