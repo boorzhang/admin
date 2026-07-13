@@ -147,6 +147,8 @@ interface DashboardDimensionsContact {
   order_count: number
   device_os: string
   browser: string
+  paid_amount?: number | string | null
+  paid_currency?: string
   last_paid_at?: string | null
   last_created_at?: string | null
 }
@@ -923,6 +925,7 @@ onMounted(() => {
                 <th class="py-2 pr-3">订单数</th>
                 <th class="py-2 pr-3">操作系统</th>
                 <th class="py-2 pr-3">浏览器</th>
+                <th class="py-2 pr-3">支付金额</th>
                 <th class="py-2 pr-3">最近支付</th>
                 <th class="py-2">最近下单</th>
               </tr>
@@ -934,6 +937,9 @@ onMounted(() => {
                 <td class="py-2 pr-3">{{ item.order_count }}</td>
                 <td class="py-2 pr-3 text-xs uppercase">{{ item.device_os }}</td>
                 <td class="py-2 pr-3 text-xs uppercase">{{ item.browser }}</td>
+                <td class="py-2 pr-3 whitespace-nowrap font-mono text-xs">
+                  {{ item.paid_amount == null ? '-' : formatMoney(item.paid_amount, item.paid_currency || overview?.currency) }}
+                </td>
                 <td class="py-2 pr-3 text-xs">{{ formatLastSeen(item.last_paid_at) }}</td>
                 <td class="py-2 text-xs">{{ formatLastSeen(item.last_created_at) }}</td>
               </tr>
