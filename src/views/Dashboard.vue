@@ -196,6 +196,18 @@ const maxPaymentTrend = computed(() => {
   return maxValue
 })
 
+const trendTip = ref<{ x: number; y: number; point: DashboardTrendPoint } | null>(null)
+const showTrendTip = (event: MouseEvent, point: DashboardTrendPoint) => {
+  trendTip.value = { x: event.clientX, y: event.clientY, point }
+}
+const moveTrendTip = (event: MouseEvent) => {
+  if (!trendTip.value) return
+  trendTip.value = { ...trendTip.value, x: event.clientX, y: event.clientY }
+}
+const hideTrendTip = () => {
+  trendTip.value = null
+}
+
 const funnelSteps = computed(() => {
   const funnel = overview.value?.funnel
   if (!funnel) return []
@@ -620,10 +632,10 @@ onMounted(() => {
             </div>
             <div class="overflow-x-auto">
               <div class="inline-flex items-end gap-2 rounded-lg bg-muted/20 px-2 py-3">
-                <div v-for="point in trendPoints" :key="point.date" class="flex shrink-0 flex-col items-center gap-1">
+                <div v-for="point in trendPoints" :key="point.date" class="flex shrink-0 cursor-default flex-col items-center gap-1 rounded px-1 hover:bg-muted/50" @mouseenter="showTrendTip($event, point)" @mousemove="moveTrendTip($event)" @mouseleave="hideTrendTip">
                   <div class="flex h-32 items-end gap-0.5">
-                    <div class="w-2 rounded-t bg-primary/80" :style="{ height: orderTotalHeight(point.orders_total) }" :title="`${t('admin.dashboard.trends.ordersTotal')}: ${point.orders_total}`"></div>
-                    <div class="w-2 rounded-t bg-emerald-500/80" :style="{ height: orderPaidHeight(point.orders_paid) }" :title="`${t('admin.dashboard.trends.ordersPaid')}: ${point.orders_paid}`"></div>
+                    <div class="w-2 rounded-t bg-primary/80" :style="{ height: orderTotalHeight(point.orders_total) }"></div>
+                    <div class="w-2 rounded-t bg-emerald-500/80" :style="{ height: orderPaidHeight(point.orders_paid) }"></div>
                   </div>
                   <div class="whitespace-nowrap text-[10px] text-muted-foreground">{{ shortDate(point.date) }}</div>
                   <div class="whitespace-nowrap text-[10px] font-medium text-emerald-600 dark:text-emerald-400">{{ formatMoney(point.profit, overview?.currency) }}</div>
@@ -648,12 +660,13 @@ onMounted(() => {
             </div>
             <div class="overflow-x-auto">
               <div class="inline-flex items-end gap-2 rounded-lg bg-muted/20 px-2 py-3">
-                <div v-for="point in trendPoints" :key="`${point.date}-payment`" class="flex shrink-0 flex-col items-center gap-1">
+                <div v-for="point in trendPoints" :key="`${point.date}-payment`" class="flex shrink-0 cursor-default flex-col items-center gap-1 rounded px-1 hover:bg-muted/50" @mouseenter="showTrendTip($event, point)" @mousemove="moveTrendTip($event)" @mouseleave="hideTrendTip">
                   <div class="flex h-32 items-end gap-0.5">
-                    <div class="w-2 rounded-t bg-sky-500/80" :style="{ height: paymentSuccessHeight(point.payments_success) }" :title="`${t('admin.dashboard.trends.paymentsSuccess')}: ${point.payments_success}`"></div>
-                    <div class="w-2 rounded-t bg-rose-500/80" :style="{ height: paymentFailedHeight(point.payments_failed) }" :title="`${t('admin.dashboard.trends.paymentsFailed')}: ${point.payments_failed}`"></div>
+                    <div class="w-2 rounded-t bg-sky-500/80" :style="{ height: paymentSuccessHeight(point.payments_success) }"></div>
+                    <div class="w-2 rounded-t bg-rose-500/80" :style="{ height: paymentFailedHeight(point.payments_failed) }"></div>
                   </div>
                   <div class="whitespace-nowrap text-[10px] text-muted-foreground">{{ shortDate(point.date) }}</div>
+                  <div class="whitespace-nowrap text-[10px] font-medium text-sky-600 dark:text-sky-400">{{ formatMoney(point.gmv_paid, overview?.currency) }}</div>
                 </div>
               </div>
             </div>
@@ -948,6 +961,16 @@ onMounted(() => {
         </div>
       </CardContent>
     </Card>
+
+    <div v-if="trendTip" class="pointer-events-none fixed z-50 rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-lg" :style="{ left: `${trendTip.x + 14}px`, top: `${trendTip.y + 14}px` }">
+      <div class="mb-1 font-medium">{{ trendTip.point.date }}</div>
+      <div class="flex items-center justify-between gap-6"><span class="text-muted-foreground">{{ t('admin.dashboard.trends.ordersTotal') }}</span><span class="font-mono">{{ trendTip.point.orders_total }}</span></div>
+      <div class="flex items-center justify-between gap-6"><span class="text-muted-foreground">{{ t('admin.dashboard.trends.ordersPaid') }}</span><span class="font-mono">{{ trendTip.point.orders_paid }}</span></div>
+      <div class="flex items-center justify-between gap-6"><span class="text-muted-foreground">{{ t('admin.dashboard.trends.paymentsSuccess') }}</span><span class="font-mono">{{ trendTip.point.payments_success }}</span></div>
+      <div class="flex items-center justify-between gap-6"><span class="text-muted-foreground">{{ t('admin.dashboard.trends.paymentsFailed') }}</span><span class="font-mono">{{ trendTip.point.payments_failed }}</span></div>
+      <div class="mt-1 flex items-center justify-between gap-6 border-t border-border pt-1"><span class="text-muted-foreground">{{ t('admin.dashboard.trends.gmvPaid') }}</span><span class="font-mono font-semibold text-sky-600 dark:text-sky-400">{{ formatMoney(trendTip.point.gmv_paid, overview?.currency) }}</span></div>
+      <div class="flex items-center justify-between gap-6"><span class="text-muted-foreground">{{ t('admin.dashboard.trends.profit') }}</span><span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{{ formatMoney(trendTip.point.profit, overview?.currency) }}</span></div>
+    </div>
 
   </div>
 </template>
