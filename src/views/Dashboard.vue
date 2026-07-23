@@ -40,6 +40,8 @@ interface DashboardOverview {
     pending_payment_orders: number
     processing_orders: number
     gmv_paid: string
+    real_received: string
+    claim_amount: string
     total_cost: string
     total_profit: string
     profit_margin: string
@@ -502,6 +504,26 @@ onMounted(() => {
         <CardContent>
           <div class="text-2xl font-semibold">{{ overview?.kpi.orders_total ?? 0 }}</div>
           <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.paidOrders') }}: {{ overview?.kpi.paid_orders ?? 0 }}</div>
+        </CardContent>
+      </Card>
+
+      <Card class="min-w-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-xs font-medium text-muted-foreground">{{ t('admin.dashboard.kpi.realReceived') }}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-semibold">{{ formatMoney(overview?.kpi.real_received, overview?.currency) }}</div>
+          <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.realReceivedHint') }}</div>
+        </CardContent>
+      </Card>
+
+      <Card class="min-w-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-xs font-medium text-muted-foreground">{{ t('admin.dashboard.kpi.claimAmount') }}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-semibold">{{ formatMoney(overview?.kpi.claim_amount, overview?.currency) }}</div>
+          <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.claimAmountHint') }}</div>
         </CardContent>
       </Card>
 
