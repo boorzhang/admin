@@ -40,8 +40,8 @@ interface DashboardOverview {
     pending_payment_orders: number
     processing_orders: number
     gmv_paid: string
-    real_received: string
-    claim_amount: string
+    gmv_real: string
+    gmv_claimed: string
     total_cost: string
     total_profit: string
     profit_margin: string
@@ -411,6 +411,9 @@ const alertLabel = (type: string) => {
   return translated === key ? type : translated
 }
 
+const alertValue = (alert: DashboardAlertItem) =>
+  alert.type === 'self_service_claim_ratio' ? `${alert.value}%` : String(alert.value)
+
 const inventoryAlertLabel = (item: AdminDashboardInventoryAlert) => {
   return item.alert_type === 'out_of_stock_products'
     ? t('admin.dashboard.inventoryAlerts.outOfStock')
@@ -509,31 +512,31 @@ onMounted(() => {
 
       <Card class="min-w-0">
         <CardHeader class="pb-2">
-          <CardTitle class="text-xs font-medium text-muted-foreground">{{ t('admin.dashboard.kpi.realReceived') }}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="text-2xl font-semibold">{{ formatMoney(overview?.kpi.real_received, overview?.currency) }}</div>
-          <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.realReceivedHint') }}</div>
-        </CardContent>
-      </Card>
-
-      <Card class="min-w-0">
-        <CardHeader class="pb-2">
-          <CardTitle class="text-xs font-medium text-muted-foreground">{{ t('admin.dashboard.kpi.claimAmount') }}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div class="text-2xl font-semibold">{{ formatMoney(overview?.kpi.claim_amount, overview?.currency) }}</div>
-          <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.claimAmountHint') }}</div>
-        </CardContent>
-      </Card>
-
-      <Card class="min-w-0">
-        <CardHeader class="pb-2">
           <CardTitle class="text-xs font-medium text-muted-foreground">{{ t('admin.dashboard.kpi.gmvPaid') }}</CardTitle>
         </CardHeader>
         <CardContent>
           <div class="text-2xl font-semibold">{{ formatMoney(overview?.kpi.gmv_paid, overview?.currency) }}</div>
           <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.paymentSuccessRate') }}: {{ overview?.kpi.payment_success_rate ?? '0.00' }}%</div>
+        </CardContent>
+      </Card>
+
+      <Card class="min-w-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-xs font-medium text-muted-foreground">{{ t('admin.dashboard.kpi.gmvReal') }}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-semibold">{{ formatMoney(overview?.kpi.gmv_real, overview?.currency) }}</div>
+          <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.gmvRealHint') }}</div>
+        </CardContent>
+      </Card>
+
+      <Card class="min-w-0">
+        <CardHeader class="pb-2">
+          <CardTitle class="text-xs font-medium text-muted-foreground">{{ t('admin.dashboard.kpi.gmvClaimed') }}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-semibold">{{ formatMoney(overview?.kpi.gmv_claimed, overview?.currency) }}</div>
+          <div class="mt-1 text-xs text-muted-foreground">{{ t('admin.dashboard.kpi.gmvClaimedHint') }}</div>
         </CardContent>
       </Card>
 
@@ -798,7 +801,7 @@ onMounted(() => {
             >
               <div class="flex items-center justify-between gap-2">
                 <span class="font-medium">{{ alertLabel(alert.type) }}</span>
-                <span class="font-mono text-xs">{{ alert.value }}</span>
+                <span class="font-mono text-xs">{{ alertValue(alert) }}</span>
               </div>
             </div>
           </div>
